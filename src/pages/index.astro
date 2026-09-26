@@ -49,26 +49,41 @@ import { internData } from '../data/interns';
 
       .calendar-section { background: white; padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 24px rgba(61,64,53,0.03); }
 
-      .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--grid-border) !important; border-left: 1px solid var(--grid-border) !important; background: white; }
-      .calendar-header { font-size: 0.95rem; color: var(--text-muted); text-align: center; padding: 15px 0; font-weight: 600; background: #faf8f5; border-right: 1px solid var(--grid-border) !important; border-bottom: 1px solid var(--grid-border) !important; }
+      /* 💡 修改：讓格子之間有 8px 欄位間距，移除原本的單邊框線邏輯 */
+      .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: transparent; }
+      .calendar-header { font-size: 0.95rem; color: var(--text-muted); text-align: center; padding: 15px 0; font-weight: 600; background: #faf8f5; border: 1px solid var(--grid-border); border-radius: 6px; }
       
-      .calendar-day { background: white !important; border-right: 1px solid var(--grid-border) !important; border-bottom: 1px solid var(--grid-border) !important; min-height: 180px !important; height: auto !important; padding: 12px; display: flex; flex-direction: column; gap: 6px; transition: all 0.2s ease; cursor: pointer; }
-      .calendar-day:hover { background: #fdfcf9 !important; box-shadow: inset 0 0 0 2px var(--sage-green); }
-      .calendar-day.empty { background: var(--bg-cream) !important; opacity: 0.6; pointer-events: none; }
+      /* 💡 修改：獨立四周框線、圓角，並精準鎖定至少「日期 + 5行活動」的最小高度 */
+      .calendar-day { 
+        background: white !important; 
+        border: 1px solid var(--grid-border) !important; 
+        border-radius: 8px;
+        min-height: calc(1.4rem + (1.22rem * 5) + 30px) !important; /* 精算：日期字高 + 5行活動高度 + 內邊距上下 */
+        height: auto !important; 
+        padding: 12px; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 6px; 
+        transition: all 0.2s ease; 
+        cursor: pointer; 
+      }
+      .calendar-day:hover { background: #fdfcf9 !important; border-color: var(--sage-green) !important; box-shadow: 0 0 0 1px var(--sage-green); }
+      .calendar-day.empty { background: var(--bg-cream) !important; border: 1px dashed var(--border-color) !important; opacity: 0.5; pointer-events: none; }
       
-      .day-number { font-size: 1.4rem !important; font-weight: 700; color: var(--text-main); margin-bottom: 6px; line-height: 1; text-align: left; }
-      .calendar-day.is-holiday { background-color: #fffaf9 !important; }
+      .day-number { font-size: 1.4rem !important; font-weight: 700; color: var(--text-main); margin-bottom: 4px; line-height: 1; text-align: left; }
+      .calendar-day.is-holiday { background-color: #fffaf9 !important; border-color: #f5c2be !important; }
       .calendar-day.is-holiday .day-number { color: var(--holiday-red); }
 
-      .activity-item { padding: 6px 8px; border-radius: 4px; border-left: 3px solid var(--sage-green); background-color: var(--sage-light); text-align: left; }
-      .act-time { font-size: 0.75rem; font-weight: 700; display: block; margin-bottom: 2px; opacity: 0.85; }
+      /* 💡 確保單個活動高度固定，便於精準計算 5 行字高 */
+      .activity-item { padding: 4px 8px; border-radius: 4px; border-left: 3px solid var(--sage-green); background-color: var(--sage-light); text-align: left; min-height: 1.22rem; }
+      .act-time { font-size: 0.75rem; font-weight: 700; display: block; margin-bottom: 2px; opacity: 0.85; line-height: 1; }
       .act-title { font-size: 0.82rem; font-weight: 600; word-break: break-all; line-height: 1.2; }
 
       .loading-status { text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px; font-style: italic; }
 
       @media (max-width: 768px) {
-        .calendar-grid { grid-template-columns: repeat(7, 1fr); }
-        .calendar-day { min-height: 120px !important; padding: 6px; }
+        .calendar-grid { gap: 4px; }
+        .calendar-day { padding: 6px; min-height: 140px !important; }
         .day-number { font-size: 1.1rem !important; }
       }
     </style>
@@ -103,7 +118,7 @@ import { internData } from '../data/interns';
         <section class="calendar-section">
           <div id="loading-text" class="loading-status">正在連線至 Supabase 雲端手帳...</div>
           
-          <div class="calendar-grid">
+          <div class="calendar-grid" style="margin-bottom: 8px;">
             <div class="calendar-header">日</div>
             <div class="calendar-header">一</div>
             <div class="calendar-header">二</div>
@@ -141,7 +156,7 @@ import { internData } from '../data/interns';
       // 取得 DOM 元素
       const authBlock = document.getElementById('auth-block');
       const appBlock = document.getElementById('app-block');
-      const loginPasswordInput = document.getElementById('login-password') as HTMLInputElement;
+      const loginPasswordInput = document.getElementById('login-password');
       const btnLogin = document.getElementById('btn-login');
       const loginError = document.getElementById('login-error');
       const btnLogout = document.getElementById('btn-logout');
@@ -153,8 +168,8 @@ import { internData } from '../data/interns';
       const btnNext = document.getElementById('btn-next-month');
 
       function initSupabase() {
-        if ((window as any).supabase) {
-          supabaseClient = (window as any).supabase.createClient(supabaseUrl, supabaseKey);
+        if (window.supabase) {
+          supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
           return true;
         }
         return false;
@@ -172,7 +187,6 @@ import { internData } from '../data/interns';
         }
       }
 
-      // 💡 調用上一步在 Supabase SQL Editor 建立的安全 RPC 驗證函式
       async function handleLogin() {
         if (!loginPasswordInput) return;
         const inputPassword = loginPasswordInput.value.trim();
@@ -181,7 +195,6 @@ import { internData } from '../data/interns';
         if (!supabaseClient && !initSupabase()) return;
 
         try {
-          // 呼叫 RPC，將密碼丟給資料庫後端去比對，只拿回 true/false
           const { data: isCorrect, error } = await supabaseClient.rpc('verify_site_password', {
             input_password: inputPassword
           });
@@ -247,7 +260,6 @@ import { internData } from '../data/interns';
           dayCell.className = `calendar-day ${isHoliday ? 'is-holiday' : ''}`;
           
           dayCell.addEventListener('click', () => {
-            // 💡 提醒：在 GitHub Pages 上點擊單日，若有單日詳細頁，需要注意相對路徑（例如改為 /day.html?date=... 或符合你的 Astro 路由規劃）
             window.open(`/day/${dateStr}`, '_blank');
           });
 
